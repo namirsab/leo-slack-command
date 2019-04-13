@@ -96,7 +96,7 @@ fastify.post('/leo', async (request, reply) => {
 
 // Run the server!
 const start = async () => {
-    await fastify.listen(4930)
+    await fastify.listen(8080)
     fastify.log.info(`server listening on ${fastify.server.address().port}`)
 }
 

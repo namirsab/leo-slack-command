@@ -3,8 +3,12 @@
 const fastify = require('fastify')({ logger: true })
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const low = require('lowdb')
+const FileSync = require('lowdb/adapters/FileSync');
+const Memory = require('lowdb/adapters/Memory')
 
-const userPrefs = {};
+const adapter = new FileSync('db.json');
+const db = low(adapter)
 
 const languageCodeToLanguageSetting = {
     es: 'spanisch',
@@ -39,6 +43,7 @@ const parseArguments = ({ argsText, defaultSourceLanguageCode = 'es' }) => {
 
 async function fetchTranslations({ fromLanguage, term, sourceLanguageCode }) {
     const url = `https://dict.leo.org/${fromLanguage}-deutsch/${term}`;
+    console.log({ url });
     const html = await fetch(url).then(r => r.text());
     const $ = cheerio.load(html);
     const results = $('[data-dz-ui=dictentry]');
@@ -51,31 +56,35 @@ async function fetchTranslations({ fromLanguage, term, sourceLanguageCode }) {
     return response;
 }
 
-
 fastify.register(require('fastify-formbody'))
-
-
 
 // Declare a route
 fastify.post('/leo', async (request, reply) => {
     const { text, user_id } = request.body;
     
-    const defaultSourceLanguageCode = userPrefs[user_id];
+    const defaultSourceLanguageCode = db.get(user_id).value();
 
     const { fromLanguage, term, sourceLanguageCode } = parseArguments({ 
         argsText: text, 
         defaultSourceLanguageCode,
     });
     
-    // Override user preference
-    userPrefs[user_id] = sourceLanguageCode;
-
+    
     const translations = await fetchTranslations({ 
         fromLanguage, 
         term, 
         sourceLanguageCode,
     });
+    
+    // Override user preference
+    db.set(user_id, sourceLanguageCode).write();
 
+    console.log({
+        fromLanguage,
+        term,
+        sourceLanguageCode,
+    })
+    
     return {
         text: `*Results for "${term}"*`,
         attachments: [{
@@ -90,6 +99,7 @@ const start = async () => {
     await fastify.listen(4930)
     fastify.log.info(`server listening on ${fastify.server.address().port}`)
 }
+
 start()
 
 

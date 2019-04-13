@@ -43,7 +43,6 @@ const parseArguments = ({ argsText, defaultSourceLanguageCode = 'es' }) => {
 
 async function fetchTranslations({ fromLanguage, term, sourceLanguageCode }) {
     const url = `https://dict.leo.org/${fromLanguage}-deutsch/${term}`;
-    console.log({ url });
     const html = await fetch(url).then(r => r.text());
     const $ = cheerio.load(html);
     const results = $('[data-dz-ui=dictentry]');
@@ -78,12 +77,6 @@ fastify.post('/leo', async (request, reply) => {
     
     // Override user preference
     db.set(user_id, sourceLanguageCode).write();
-
-    console.log({
-        fromLanguage,
-        term,
-        sourceLanguageCode,
-    })
     
     return {
         text: `*Results for "${term}"*`,
@@ -96,7 +89,7 @@ fastify.post('/leo', async (request, reply) => {
 
 // Run the server!
 const start = async () => {
-    await fastify.listen(8080)
+    await fastify.listen(process.env.PORT)
     fastify.log.info(`server listening on ${fastify.server.address().port}`)
 }
 

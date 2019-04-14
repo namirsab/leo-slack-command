@@ -59,7 +59,7 @@ async function fetchTranslations({ fromLanguage, term, sourceLanguageCode }) {
 fastify.register(require('fastify-formbody'))
 
 // Declare a route
-fastify.post('/leo', async (request, reply) => {
+fastify.post('/leo', async (request) => {
     console.log('leo');
     const { text, user_id } = request.body;
     
@@ -70,16 +70,14 @@ fastify.post('/leo', async (request, reply) => {
         defaultSourceLanguageCode,
     });
     
-    console.time('fetchTranslations');
     const translations = await fetchTranslations({ 
         fromLanguage, 
         term, 
         sourceLanguageCode,
     });
-    console.timeEnd('fetchTranslations');
     
     // Override user preference
-    // db.set(user_id, sourceLanguageCode).write();
+    db.set(user_id, sourceLanguageCode).write();
     
     return {
         text: `*Results for "${term}"*`,

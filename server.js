@@ -4,8 +4,8 @@ const fastify = require('fastify')({ logger: true })
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const low = require('lowdb')
+const { URL } = require('url');
 const FileSync = require('lowdb/adapters/FileSync');
-const Memory = require('lowdb/adapters/Memory')
 
 const adapter = new FileSync('db.json');
 const db = low(adapter)
@@ -43,8 +43,9 @@ const parseArguments = ({ argsText, defaultSourceLanguageCode = 'es' }) => {
 };
 
 async function fetchTranslations({ fromLanguage, term, sourceLanguageCode }) {
-    const url = `https://dict.leo.org/${fromLanguage}-deutsch/${term}`;
-    const html = await fetch(url).then(r => r.text());
+    const url = new URL(`${fromLanguage}-deutsch/${term}`, 'https://dict.leo.org/');
+    const html = await fetch(url.toString()).then(r => r.text());
+
     const $ = cheerio.load(html);
     const results = $('[data-dz-ui=dictentry]');
     const response = [...results.map((index, dictEntry) => {
@@ -53,6 +54,7 @@ async function fetchTranslations({ fromLanguage, term, sourceLanguageCode }) {
         const germanText = $dictEntry.find('td[lang="de"]').text();
         return `${spanishText} <-> ${germanText}`;
     }).get()].join('\n');
+    
     return response;
 }
 
@@ -60,7 +62,6 @@ fastify.register(require('fastify-formbody'))
 
 // Declare a route
 fastify.post('/leo', async (request) => {
-    console.log('leo');
     const { text, user_id } = request.body;
     
     const defaultSourceLanguageCode = db.get(user_id).value();
